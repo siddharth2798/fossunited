@@ -59,6 +59,7 @@ jinja = {
         "fossunited.fossunited.utils.get_volunteers_stats",
         "fossunited.fossunited.utils.get_chapter_details",
         "fossunited.stack.utils.get_stack_dict",
+        "fossunited.stack.utils.get_inactive_stack",
         "fossunited.www.events.timeline.index.get_must_attend_events",
         "fossunited.fossunited.utils.get_all_city_names",
     ],
@@ -130,6 +131,11 @@ website_redirects = [
     },
     # fosshack
     {"source": r"^fosshack/(\d{4})/results/?$", "target": "/fosshack/results?year=\\1"},
+    # blog
+    {
+        "source": r"^https://(.+)$",
+        "target": r"https://\1",
+    },
 ]
 
 # Installation

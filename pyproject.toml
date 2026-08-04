@@ -8,13 +8,12 @@ requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    "razorpay~=1.4.2",
-    "PyGithub~=2.3.0",
-    "Faker~=27.0.0",
-    "Pillow~=11.0.0",
-    "ics~=0.7.2",
-    "pre-commit>=4.2.0",
-    "tatsu<5.10.0",
+    "razorpay>=2.0.1",
+    "PyGithub>=2.9.1",
+    "Faker>=40.36.0",
+    "Pillow~=12.2.0",
+    "ics>=0.7.3",
+    "pre-commit>=4.6.1",
 ]
 
 [project.optional-dependencies]
@@ -89,5 +88,4 @@ fossunited = { workspace = true }
 [dependency-groups]
 dev = [
     "fossunited[dev]",
-    "zensical>=0.0.43",
 ]

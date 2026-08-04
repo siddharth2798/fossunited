@@ -1084,10 +1084,17 @@ h6 {
 
 .member-card {
   width: 9.375rem;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   border-radius: 0.75rem;
-  background: #fff;
+  padding: 0.625rem;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.member-card:hover {
+  background: var(--v3-card-bg);
 }
 
 .member-card--image {
@@ -1095,14 +1102,17 @@ h6 {
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 0.75rem;
+}
+
+.member-card--past .member-card--image {
   filter: grayscale(100%);
 }
 
 .member-card--contents {
   display: flex;
   flex-direction: column;
-  width: 9.375rem;
-  padding: 0.625rem 0rem;
+  width: 100%;
+  padding: 0.625rem 0rem 0;
   justify-content: center;
   align-items: flex-start;
   gap: 0.045rem;
@@ -1113,14 +1123,14 @@ h6 {
   font-weight: var(--fw-semibold);
   line-height: 150%;
   letter-spacing: -0.045rem;
+  color: var(--v3-text-color);
 }
 
 .member-card--role {
   font-size: var(--text-sm);
   font-weight: 500;
+  color: var(--v3-text-color2);
 }
-
-/* -------------- */
 
 /* FOSS Event Pages */
 
@@ -1335,7 +1345,7 @@ h6 {
   }
 
   .members-grid-6 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     place-items: center;
     gap: 1.5rem;
   }
@@ -2739,8 +2749,8 @@ a.hover-underline:hover {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: visible;
-  clip-path: inset(0 round 16px);
+  overflow: hidden;
+  border-radius: 16px;
 }
 
 .v3-event-card__banner {
@@ -2751,7 +2761,6 @@ a.hover-underline:hover {
   height: 100%;
   object-fit: cover;
   z-index: 1;
-  border-radius: 16px;
 }
 
 .v3-event-card__overlay {
@@ -3417,9 +3426,12 @@ a.m-text-1:hover, a.m-text-2:hover { filter: brightness(1.2); color: inherit; te
 .tl-date { background: var(--v3-main-bg); border-radius: 8px; width: 48px; height: 48px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .tl-day   { font-weight: 300; line-height: 1; letter-spacing: -.02em; color: var(--v3-text-color); }
 .tl-month { font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--v3-text-color2); }
+.tl-info  { font-size: .9rem; flex-shrink: 0; color: var(--v3-text-color2); opacity: .55; cursor: help; }
+.tl-info:hover, .tl-info:focus { opacity: 1; }
 .tl-row { background: var(--v3-main-bg); border-radius: 8px; height: 48px; flex: 1; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; overflow: hidden; }
 .tl-name { font-size: 1rem; letter-spacing: -.02em; color: var(--v3-text-color); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-count-num { font-weight: 800; line-height: 1.2; letter-spacing: -.04em; color: var(--v3-primary-button); }
+/* tabular-nums: fixed digit width so the ticking clock never reflows */
+.tl-count-num { font-weight: 800; line-height: 1.2; letter-spacing: -.04em; color: var(--v3-primary-button); font-variant-numeric: tabular-nums; }
 .tl-count-label { line-height: 1.2; color: var(--v3-text-color2); }
 
 /* ── Illustration strip (hover reveals photo) ───────────────── */
@@ -3578,7 +3590,6 @@ a.m-text-1:hover, a.m-text-2:hover { filter: brightness(1.2); color: inherit; te
   .m-event-thumb { display: none; }
   .m-page .col-lg-7, .m-page .col-lg-5,
   .m-page .col-md-4, .m-page .col-md-8 { flex: 0 0 100%; max-width: 100%; }
-  .gap-section { gap: 3rem; }
   .mt-section  { margin-top: 3rem; }
   .mb-section  { margin-bottom: 3rem; }
   .pb-section  { padding-bottom: 3rem; }
@@ -3797,6 +3808,15 @@ a.m-text-1:hover, a.m-text-2:hover { filter: brightness(1.2); color: inherit; te
 .v3-html-content p                        { margin-bottom: 0.75rem; }
 .v3-html-content p:last-child             { margin-bottom: 0; }
 .v3-html-content li > p                   { margin-bottom: 0; }
+/* Collapse empty paragraphs from legacy Quill content (Enter = <p><br></p>).
+   Separation is already provided by the p margin-bottom above, so a stacked
+   blank line just doubles the gap. Covers both <p></p> and <p><br></p>. */
+.v3-html-content p:empty                  { display: none; }
+/* Editors end paragraphs with a trailing <br> (e.g. <p>text.<br></p>, or a bare
+   <p><br></p> blank line), adding an extra line. Hide only a break with nothing
+   after it; <p>a<br>b</p> keeps its inner break. For <p><br></p> the paragraph
+   collapses to a small margin-only gap, which reads as an intentional blank line. */
+.v3-html-content p > br:last-child        { display: none; }
 .v3-html-content :is(h1,h2,h3,h4,h5,h6)  { margin-top: 1rem; margin-bottom: 0.5rem; }
 .v3-html-content :is(h1,h2,h3,h4,h5,h6):first-child { margin-top: 0; }
 .v3-html-content ul,

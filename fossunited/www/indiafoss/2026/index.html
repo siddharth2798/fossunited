@@ -84,17 +84,22 @@
         <div class="v3-flex-3 relative isolate">
 
           <div class="tl-card" role="region" aria-label="Timeline progress">
-            {# Countdown heading #}
-            <div class="d-flex align-items-center justify-content-between gap-2"
-                 aria-label="{% if countdown_state == 'live' %}IndiaFOSS is live{% elif countdown_state == 'concluded' %}IndiaFOSS 2026 concluded{% else %}{{ countdown_days }} days until IndiaFOSS{% endif %}">
-              <div class="d-flex align-items-baseline gap-2">
-                {% if countdown_state == 'live' %}
+            {# Countdown heading — JS ticks D/H/M(/S) from data-start/end; markup below is SSR fallback #}
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div id="if-countdown" class="d-flex align-items-start gap-3"
+                   data-start="{{ countdown.start }}" data-end="{{ countdown.end }}"
+                   aria-label="Time until IndiaFOSS 2026">
+                {% if countdown.state == 'live' %}
                   <span class="tl-count-num text-4xl" style="color: rgba(16,185,129,1);">It's Live!</span>
-                {% elif countdown_state == 'concluded' %}
+                {% elif countdown.state == 'concluded' %}
                   <span class="tl-count-num text-4xl">Concluded</span>
                 {% else %}
-                  <span class="tl-count-num text-4xl">{{ countdown_days or '' }}</span>
-                  <span class="tl-count-label text-xl semi-bold">days until IndiaFOSS</span>
+                  {% set lbl = 'text-xs text-uppercase semi-bold v3-text-tertiary mt-1' %}
+                  <div class="d-flex flex-column align-items-center"><span class="tl-count-num text-4xl" data-cd="d">{{ countdown.days or 0 }}</span><span class="{{ lbl }}">days</span></div>
+                  <div class="d-flex flex-column align-items-center"><span class="tl-count-num text-4xl" data-cd="h">00</span><span class="{{ lbl }}">hrs</span></div>
+                  <div class="d-flex flex-column align-items-center"><span class="tl-count-num text-4xl" data-cd="m">00</span><span class="{{ lbl }}">min</span></div>
+                  <div class="d-none flex-column align-items-center" data-cd-sec><span class="tl-count-num text-4xl" data-cd="s">00</span><span class="{{ lbl }}">sec</span></div>
+                  <span class="text-lg semi-bold v3-text-secondary align-self-center">until IndiaFOSS 2026</span>
                 {% endif %}
               </div>
             </div>
@@ -112,7 +117,7 @@
                        data-placement="top"
                        data-container="body"
                        title="{{ marker.description or marker.label }}">
-                    <span class="pb-chip">{{ (marker.label.split()[0] ~ '…') if marker.compact else marker.label }}</span>
+                    <span class="pb-chip">{{ (marker.label.split()[0] ~ '…') if marker.compact else marker.label }}{% if marker.is_end %} <i class="ti ti-ban" aria-hidden="true"></i>{% endif %}</span>
                     <span class="pb-tick-down"></span>
                   </div>
                 {% endfor %}
@@ -138,7 +143,7 @@
                        data-container="body"
                        title="{{ marker.description or marker.label }}">
                     <span class="pb-tick-up"></span>
-                    <span class="pb-chip">{{ (marker.label.split()[0] ~ '…') if marker.compact else marker.label }}</span>
+                    <span class="pb-chip">{{ (marker.label.split()[0] ~ '…') if marker.compact else marker.label }}{% if marker.is_end %} <i class="ti ti-ban" aria-hidden="true"></i>{% endif %}</span>
                   </div>
                 {% endfor %}
               </div>
@@ -148,23 +153,37 @@
 
             {# Bottom row: urgency text (left) + Full Timeline toggle (right) #}
             <div class="d-flex align-items-center justify-content-between gap-3">
-              {% if urgency_text %}
-                <p class="text-sm mb-0 semi-bold" style="color: var(--v3-error-text);">
-                  {{ urgency_text.label }} closing in <strong>{{ urgency_text.days }}</strong> {{ 'day' if urgency_text.days == 1 else 'days' }}
-                </p>
+              {% if urgency_items %}
+                <div class="d-flex flex-column gap-1">
+                  {% for u in urgency_items %}
+                    <p class="text-sm mb-0 semi-bold" style="color: var(--v3-error-text);">
+                      {% if u.days == 0 %}
+                        <strong>{{ u.label }}</strong>: closing today
+                      {% else %}
+                        {{ u.label }} closing in <strong>{{ u.days }}</strong> {{ 'day' if u.days == 1 else 'days' }}
+                      {% endif %}
+                    </p>
+                  {% endfor %}
+                </div>
               {% else %}
                 <span></span>
               {% endif %}
-              <button class="v3-btn v3-btn-secondary v3-btn--sm"
-                      style="text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; flex-shrink: 0;"
-                      type="button"
-                      data-toggle="collapse"
-                      data-target="#tl-expanded"
-                      aria-controls="tl-expanded"
-                      aria-expanded="false">
-                Full Timeline
-                <i class="ti ti-chevron-down v3-toggle-icon" aria-hidden="true"></i>
-              </button>
+              <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <i class="ti ti-info-circle v3-text-tertiary" style="font-size: 1rem; cursor: help;"
+                   tabindex="0" role="img" data-toggle="tooltip" data-placement="top" data-container="body"
+                   aria-label="Upcoming items show their opening date; open ones show the deadline/closing date."
+                   title="Upcoming items show their opening date; open ones show the deadline/closing date."></i>
+                <button class="v3-btn v3-btn-secondary v3-btn--sm"
+                        style="text-transform: uppercase; letter-spacing: .06em; white-space: nowrap;"
+                        type="button"
+                        data-toggle="collapse"
+                        data-target="#tl-expanded"
+                        aria-controls="tl-expanded"
+                        aria-expanded="false">
+                  Full Timeline
+                  <i class="ti ti-chevron-down v3-toggle-icon" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -185,28 +204,29 @@
                   {% else %}
                     <span class="tl-name">{{ item.label }}</span>
                   {% endif %}
+                  {% if item.extended and st in ('live', 'closing') %}
+                    <span class="v3-tag v3-status--warning flex-shrink-0">
+                      <i class="ti ti-clock-edit" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>Extended
+                    </span>
+                  {% endif %}
                   {% if st == 'live' %}
                     <span class="v3-tag v3-tag--success flex-shrink-0">
                       <span class="v3-status-dot" aria-hidden="true"></span>Live
                     </span>
-                  {% elif st == 'closing_soon' %}
-                    <span class="v3-tag v3-status--warning flex-shrink-0">
-                      <i class="ti ti-clock" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>Closing soon
-                    </span>
-                  {% elif st == 'extended' and item.get('extended_date') %}
+                  {% elif st == 'closing' %}
                     <span class="v3-tag v3-status--warning flex-shrink-0">
                       <i class="ti ti-clock" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>
-                      Extended till {{ item.extended_date }}
+                      {% if item.closing_days == 0 %}Closing today{% else %}Closing in {{ item.closing_days }} {{ 'day' if item.closing_days == 1 else 'days' }}{% endif %}
                     </span>
-                    {% if item.get('also_closing_soon') %}
-                    <span class="v3-tag v3-status--warning flex-shrink-0">
-                      <i class="ti ti-alert-triangle" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>Closing soon
-                    </span>
-                    {% endif %}
                   {% elif st == 'closed' %}
                     <span class="v3-tag v3-status--error flex-shrink-0">
                       <i class="ti ti-ban" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>Closed
                     </span>
+                  {% endif %}
+                  {% if item.range_info %}
+                    <i class="ti ti-info-circle tl-info" tabindex="0" role="img"
+                       data-toggle="tooltip" data-placement="top" data-container="body"
+                       aria-label="{{ item.range_info }}" title="{{ item.range_info }}"></i>
                   {% endif %}
                 </div>
               </div>
@@ -223,13 +243,15 @@
           <div class="v3-action-wrap">
             <div class="v3-action-grid" role="list" aria-label="Event resources">
               {% for card in action_cards %}
-                {% set badge_lower = (card.badge or '') | lower %}
-                {% set is_active = badge_lower == 'live' %}
+                {% set badge = card.get('resolved_badge') or '' %}
+                {% set state = card.get('badge_state') or '' %}
+                {% set is_closed = (card.get('clickable') == false) %}
                 {% if card.url %}
                   <a href="{{ card.url }}"
                      class="v3-action-card"
                      role="listitem"
-                     aria-label="{{ card.label }}{% if card.badge %} — {{ card.badge }}{% endif %}">
+                     {% if is_closed %}style="pointer-events:none;opacity:0.55;" aria-disabled="true" tabindex="-1"{% endif %}
+                     aria-label="{{ card.label }}{% if badge %} — {{ badge }}{% endif %}">
                 {% else %}
                   <div class="v3-action-card"
                        role="listitem"
@@ -238,25 +260,33 @@
                 {% endif %}
                   <div class="v3-action-card-top">
                     <i class="ti {{ card.icon or 'ti-arrow-right' }} v3-action-card-icon text-xl" aria-hidden="true"></i>
-                    {% if is_active %}
-                      <span class="v3-tag v3-tag--success flex-shrink-0">
-                        <span class="v3-status-dot" aria-hidden="true"></span>{{ card.badge }}
-                      </span>
+                    {% if badge %}
+                      {% if state == 'live' %}
+                        <span class="v3-tag v3-tag--success flex-shrink-0">
+                          <span class="v3-status-dot" aria-hidden="true"></span>{{ badge }}
+                        </span>
+                      {% elif state == 'warning' %}
+                        <span class="v3-tag v3-status--warning flex-shrink-0">
+                          <i class="ti ti-clock" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>{{ badge }}
+                        </span>
+                      {% elif state == 'closed' %}
+                        <span class="v3-tag v3-status--error flex-shrink-0">
+                          <i class="ti ti-ban" style="font-size:.7rem;margin-right:3px;" aria-hidden="true"></i>{{ badge }}
+                        </span>
+                      {% else %}
+                        <span class="v3-tag flex-shrink-0">{{ badge }}</span>
+                      {% endif %}
                     {% endif %}
                   </div>
                   <div>
                     <div class="v3-action-card-title-row">
                       <span class="v3-action-card-title">{{ card.label }}</span>
-                      {% if card.url %}
+                      {% if card.url and not is_closed %}
                         <i class="ti ti-chevron-right v3-action-card-arrow" aria-hidden="true"></i>
                       {% endif %}
                     </div>
-                    {% if card.deadline %}
-                      <span class="v3-action-card-sub">Due {{ frappe.utils.format_date(card.deadline, format_string='dd MMM yyyy') }}</span>
-                    {% elif card.get('description', '') %}
+                    {% if card.get('description') %}
                       <span class="v3-action-card-sub">{{ card.description }}</span>
-                    {% elif card.badge and badge_lower != 'live' %}
-                      <span class="v3-action-card-sub">{{ card.badge }}</span>
                     {% elif not card.url %}
                       <span class="v3-action-card-sub">Coming soon</span>
                     {% endif %}
@@ -644,8 +674,8 @@
 
           {# Right — support cards (sidebar on desktop, full-width row below on tablet/mobile) #}
           {% set support = [
-            {'title': 'Child Care',    'desc': 'On-site childcare during both the conference days.',                    'form_url': '', 'has_form': true, 'icon': 'ti-baby-carriage'},
-            {'title': 'Accessibility', 'desc': 'We give support to make the conference accessible for all.',            'form_url': '', 'has_form': true, 'icon': 'ti-accessible'},
+            {'title': 'Child Care',    'desc': 'On-site childcare during both the conference days.',                    'form_url': 'https://fossunited.org/indiafoss/childcare/new', 'has_form': true, 'icon': 'ti-baby-carriage'},
+            {'title': 'Accessibility', 'desc': 'We give support to make the conference accessible for all.',            'form_url': 'https://fossunited.org/indiafoss/accessibility/new', 'has_form': true, 'icon': 'ti-accessible'},
             {'title': 'Low Waste',    'desc': 'Bring your own bottles. Help our conference produce low waste output.', 'form_url': '', 'has_form': false, 'icon': 'ti-leaf'},
           ] %}
           <div class="v3-flex-1" aria-label="Support and accessibility">
@@ -730,6 +760,39 @@ frappe.ready(function() { $('[data-toggle="tooltip"]').tooltip(); });
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
     });
   });
+})();
+
+// Countdown: tick D/H/M(/S) from fixed timestamps; seconds shown only in the last week
+(function() {
+  var el = document.getElementById('if-countdown');
+  if (!el || !el.dataset.start) return;
+  var IST = '+05:30';  // event is in India; IST has no DST
+  var start = +new Date(el.dataset.start + IST), end = +new Date(el.dataset.end + IST);
+  var sec = el.querySelector('[data-cd-sec]');
+  var anim = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var units = [['d', 864e5, 1e9], ['h', 36e5, 24], ['m', 6e4, 60], ['s', 1e3, 60]];  // key, ms, wrap
+  var timer = setInterval(tick, 1000); tick();
+
+  function tick() {
+    var now = Date.now(), diff = start - now;
+    if (diff <= 0) {  // reached start: flip to Live, or Concluded once past end
+      clearInterval(timer);
+      el.innerHTML = now >= end ? '<span class="tl-count-num text-4xl">Concluded</span>'
+        : '<span class="tl-count-num text-4xl" style="color:rgba(16,185,129,1)">It\'s Live!</span>';
+      return;
+    }
+    units.forEach(function(u) {
+      var node = el.querySelector('[data-cd="' + u[0] + '"]'), v = Math.floor(diff / u[1]) % u[2];
+      var s = (v < 10 ? '0' : '') + v;
+      if (node.textContent === s) return;  // unchanged: skip rewrite + animation
+      node.textContent = s;
+      if (anim && node.animate) node.animate(
+        [{ transform: 'translateY(-45%)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+        { duration: 220, easing: 'ease-out' });
+    });
+    sec.classList.toggle('d-none', diff >= 6048e5);  // 7 days
+    sec.classList.toggle('d-flex', diff < 6048e5);
+  }
 })();
 
 // Progress bar: clamp chip positions to stay within bar width
